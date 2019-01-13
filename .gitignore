@@ -3,7 +3,9 @@
 
 # All voice data
 # ModernOTData/
+
 .DS_Store
+
 
 # Python directory
 __pycache__/
