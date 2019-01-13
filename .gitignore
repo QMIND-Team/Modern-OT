@@ -3,3 +3,6 @@
 
 # All voice data
 ModernOTData/
+
+# Python directory
+__pycache__/
