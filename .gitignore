@@ -2,7 +2,7 @@
 .idea/
 
 # All voice data
-ModernOTData/
+# ModernOTData/
 
 # Python directory
 __pycache__/
