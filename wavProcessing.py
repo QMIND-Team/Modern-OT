@@ -1,3 +1,6 @@
+# This file is no longer needed for our project, but it might be useful to keep
+# TODO: Consider deleting this file
+
 from pyAudioAnalysis import audioFeatureExtraction
 import matplotlib.pyplot as plt
 import os
@@ -52,10 +55,7 @@ def readAudioFile(path):
             else:
                 return -1, -1
             Fs = audiofile.frame_rate
-            x = []
-            for chn in list(range(audiofile.channels)):
-                x.append(data[chn::audiofile.channels])
-            x = numpy.array(x).T
+            x = numpy.array(data[0::audiofile.channels]).T
         else:
             print("Error in readAudioFile(): Unknown file type!")
             return -1, -1
@@ -259,31 +259,31 @@ def get_trimmed_features(words, num_recordings, base_path="", energy_threshold=0
     return features_by_word
 
 
-word_list = ["light", "off", "on", "slack", "tv"]
-# Could change this to numbers between 1 and 30 to see how it handles more or less data
-nums = [30, 30, 30, 30, 30]
-# The base_directory might be different for windows users
-base_directory = "ModernOTData/"
-output = get_trimmed_features(word_list, nums, base_directory)
-
-# energy_values is a sequential list of all energy values over all recordings
-energy_values = []
-
-# Should print 5
-print("There are", len(output), "different words")
-for word_num in range(len(output)):
-    # Should print 30
-    print("There are", len(output[word_num]), "different recordings for word", word_list[word_num])
-    for recording_num in range(len(output[word_num])):
-        # Print number of frames for each recording
-        # Should be equal for all words
-        print("# frames:", len(output[word_num][recording_num]), "in recording #", str(recording_num+1), "for word",
-              word_list[word_num])
-        for frame in output[word_num][recording_num]:
-            # Should be 34 features for each frame
-            # print(len(frame))
-            # frame[1] is the energy for that frame
-            energy_values.append(frame[1])
-
-# Sample plot of energies across every recording
-make_line_plot(energy_values, "Frame Number", "Energy")
+# word_list = ["light", "off", "on", "slack", "tv"]
+# # Could change this to numbers between 1 and 30 to see how it handles more or less data
+# nums = [30, 30, 30, 30, 30]
+# # The base_directory might be different for windows users
+# base_directory = "ModernOTData/"
+# output = get_trimmed_features(word_list, nums, base_directory)
+#
+# # energy_values is a sequential list of all energy values over all recordings
+# energy_values = []
+#
+# # Should print 5
+# print("There are", len(output), "different words")
+# for word_num in range(len(output)):
+#     # Should print 30
+#     print("There are", len(output[word_num]), "different recordings for word", word_list[word_num])
+#     for recording_num in range(len(output[word_num])):
+#         # Print number of frames for each recording
+#         # Should be equal for all words
+#         print("# frames:", len(output[word_num][recording_num]), "in recording #", str(recording_num+1), "for word",
+#               word_list[word_num])
+#         for frame in output[word_num][recording_num]:
+#             # Should be 34 features for each frame
+#             # print(len(frame))
+#             # frame[1] is the energy for that frame
+#             energy_values.append(frame[1])
+#
+# # Sample plot of energies across every recording
+# make_line_plot(energy_values, "Frame Number", "Energy")
