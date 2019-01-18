@@ -16,7 +16,7 @@ from pydub import AudioSegment
 
 # START SEGMENTATION SECTION
 def trainHMM_fromFile(wav_file, gt_file, hmm_model_name, mt_win, mt_step, st_win=0.05, st_step=0.05):
-    '''
+    """
     This function trains a HMM model for segmentation-classification using a single annotated audio file
     ARGUMENTS:
      - wav_file:        the path of the audio filename
@@ -30,7 +30,7 @@ def trainHMM_fromFile(wav_file, gt_file, hmm_model_name, mt_win, mt_step, st_win
      - class_names:     a list of class_names
 
     After training, hmm, class_names, along with the mt_win and mt_step values are stored in the hmm_model_name file
-    '''
+    """
 
     [seg_start, seg_end, seg_labs] = readSegmentGT(gt_file)
     flags, class_names = segs2flags(seg_start, seg_end, seg_labs, mt_step)
@@ -58,7 +58,7 @@ def trainHMM_fromFile(wav_file, gt_file, hmm_model_name, mt_win, mt_step, st_win
 
 
 def trainHMM_fromDir(dirPath, hmm_model_name, mt_win, mt_step, st_win=0.05, st_step=0.05):
-    '''
+    """
     This function trains a HMM model for segmentation-classification using
     a where WAV files and .segment (ground-truth files) are stored
     ARGUMENTS:
@@ -72,7 +72,7 @@ def trainHMM_fromDir(dirPath, hmm_model_name, mt_win, mt_step, st_win=0.05, st_s
 
     After training, hmm, class_names, along with the mt_win
     and mt_step values are stored in the hmm_model_name file
-    '''
+    """
 
     flags_all = numpy.array([])
     classes_all = []
@@ -134,7 +134,7 @@ def hmmSegmentation(wav_file_name, hmm_model_name, plot_res=False,
     try:
         fo = open(hmm_model_name, "rb")
     except IOError:
-        print("didn't find file")
+        print("Couldn't find audio file")
         return
 
     try:
@@ -142,11 +142,12 @@ def hmmSegmentation(wav_file_name, hmm_model_name, plot_res=False,
         classes_all = cPickle.load(fo)
         mt_win = cPickle.load(fo)
         mt_step = cPickle.load(fo)
-        # Edited
         st_win = cPickle.load(fo)
         st_step = cPickle.load(fo)
     except:
+        print("Couldn't find HMM file")
         fo.close()
+        return
     fo.close()
 
     [Features, _, _] = aF.mtFeatureExtraction(x, fs, mt_win * fs, mt_step * fs,
@@ -173,14 +174,14 @@ def hmmSegmentation(wav_file_name, hmm_model_name, plot_res=False,
     acc = plotSegmentationResults(flags_ind, flags_ind_gt, classes_all,
                                   mt_step, not plot_res)
     if acc >= 0:
-        # print("Overall Accuracy: {0:.2f}".format(acc))
+        #print("Overall Accuracy: {0:.2f}".format(acc))
         return (flags_ind, class_names_gt, acc, cm)
     else:
         return (flags_ind, classes_all, -1, -1)
 
 
 def trainHMM_computeStatistics(features, labels):
-    '''
+    """
     This function computes the statistics used to train an HMM joint segmentation-classification model
     using a sequence of sequential features and respective labels
 
@@ -192,7 +193,7 @@ def trainHMM_computeStatistics(features, labels):
      - transmat:    transition matrix (n_classes x n_classes)
      - means:    means matrix (numOfDimensions x 1)
      - cov:        deviation matrix (numOfDimensions x 1)
-    '''
+    """
     u_labels = numpy.unique(labels)
     n_comps = len(u_labels)
 
@@ -235,7 +236,7 @@ def trainHMM_computeStatistics(features, labels):
 
 
 def readSegmentGT(gt_file):
-    '''
+    """
     This function reads a segmentation ground truth file, following a simple CSV format with the following columns:
     <segment start>,<segment end>,<class label>
 
@@ -245,7 +246,7 @@ def readSegmentGT(gt_file):
      - seg_start:     a numpy array of segments' start positions
      - seg_end:       a numpy array of segments' ending positions
      - seg_label:     a list of respective class labels (strings)
-    '''
+    """
     f = open(gt_file, 'rt')
     reader = csv.reader(f, delimiter=',')
     seg_start = []
@@ -264,10 +265,10 @@ def readSegmentGT(gt_file):
 
 
 def plotSegmentationResults(flags_ind, flags_ind_gt, class_names, mt_step, ONLY_EVALUATE=False):
-    '''
+    """
     This function plots statistics on the classification-segmentation results produced either by the fix-sized supervised method or the HMM method.
     It also computes the overall accuracy achieved by the respective method if ground-truth is available.
-    '''
+    """
     # print(flags_ind)
     # print(flags_ind_gt)
     # print(class_names)
@@ -338,7 +339,7 @@ def plotSegmentationResults(flags_ind, flags_ind_gt, class_names, mt_step, ONLY_
 
 
 def flags2segs(flags, window):
-    '''
+    """
     ARGUMENTS:
      - flags:      a sequence of class flags (per time window)
      - window:     window duration (in seconds)
@@ -348,7 +349,7 @@ def flags2segs(flags, window):
                    segs[i,1] are start and end point of segment i
      - classes:    a sequence of class flags: class[i] is the class ID of
                    the i-th segment
-    '''
+    """
 
     preFlag = 0
     cur_flag = 0
@@ -381,7 +382,7 @@ def flags2segs(flags, window):
 
 
 def segs2flags(seg_start, seg_end, seg_label, win_size):
-    '''
+    """
     This function converts segment endpoints and respective segment
     labels to fix-sized class labels.
     ARGUMENTS:
@@ -392,7 +393,7 @@ def segs2flags(seg_start, seg_end, seg_label, win_size):
     RETURNS:
      - flags:    numpy array of class indices
      - class_names:    list of classnames (strings)
-    '''
+    """
     flags = []
     class_names = list(set(seg_label))
     curPos = win_size / 2.0

@@ -1,8 +1,12 @@
 # PyCharm file, not needed
 .idea/
 
-# All voice data
-# ModernOTData/
+# All of Jason's voice data
+ModernOTData/JasonAudio/*.wav
+ModernOTData/JasonTest/*.wav
+
+# All audacity projects
+ModernOTData/Audacity
 
 .DS_Store
 

@@ -89,6 +89,7 @@ def optimizeParameters(stWinSizeMin=0.02, stWinSizeMax=0.05, stWinSizeInterval=0
                         aa.trainHMM_fromDir(trainDir, hmmTempName, mtWinSize, mtWinStep, stWinSize, stWinStep)
                         # Test HMM
                         acc = testFromDir(testDir, hmmTempName)
+                        print("Last accuracy: {0:.2f}%".format(acc*100))
                         # If this config is better than the existing,
                         if acc > bestAcc:
                             bestAcc = acc
@@ -96,7 +97,11 @@ def optimizeParameters(stWinSizeMin=0.02, stWinSizeMax=0.05, stWinSizeInterval=0
                     except ValueError:
                         # Some configurations raise a value error. Haven't pinned down exactly which ones those are
                         # But there is a pattern. Skipping such configs could optimize the processing
-                        print("Bad Config:")
+                        print("Bad Config: ValueError")
+                        print(mtWinSize, mtWinStep, stWinSize, stWinStep)
+                    except IndexError:
+                        # This is a weird one, not sure what causes it
+                        print("Bad Config: IndexError")
                         print(mtWinSize, mtWinStep, stWinSize, stWinStep)
                     stWinStep += stWinStepInterval
                 stWinSize += stWinSizeInterval
@@ -219,8 +224,7 @@ def writeAudioFile(path, sampleRate, sig):
 # If the an HMM has not already been trained
 if not os.path.isfile(hmmName):
     # Get the best config for short and mid term window size and step
-    # Current parameters chosen solely for speed, probably not the best for actual testing
-    config = optimizeParameters(stWinSizeMin=0.02, stWinSizeMax=0.025, stWinSizeInterval=0.005, stWinStepFactor=2,
+    config = optimizeParameters(stWinSizeMin=0.02, stWinSizeMax=0.03, stWinSizeInterval=0.005, stWinStepFactor=2,
                                 stWinStepNumIntervals=2, mtWinSizeMin=0.1, mtWinSizeMax=0.2, mtWinSizeInterval=0.05,
                                 mtWinStepFactor=2, mtWinStepNumIntervals=2, hmmTempName="tempHMM")
     # Create a trained HMM with the best configuration.
