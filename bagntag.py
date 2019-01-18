@@ -1,3 +1,6 @@
+# This file is no longer needed for our project, but it might be useful to keep
+# TODO: Consider deleting this file
+
 import wavProcessing
 import h5py
 import pyAudioAnalysis
