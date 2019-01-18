@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-
-
-=======
->>>>>>> b34e24e3b27ed31848e98c5d67fd24215507db24
 from pyAudioAnalysis import audioFeatureExtraction
 import matplotlib.pyplot as plt
 import os
