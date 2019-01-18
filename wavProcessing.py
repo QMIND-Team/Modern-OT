@@ -10,17 +10,14 @@ from pydub import AudioSegment
 
 def readAudioFile(path):
     """Reads an audio file located at specified path and returns a numpy array of audio samples
-
     NOTE: This entire function was ripped from pyAudioAnalysis.audioBasicIO.py
     All credits to the original author, Theodoros Giannakopoulos.
     The existing audioBasicIO.py relies on broken dependencies, so it is much more reliable to rip the only function
     we need to process WAV files
-
     Paramters
     ----------
     path : str
         The path to a given audio file
-
     Returns
     ----------
     Fs : int
@@ -72,12 +69,10 @@ def readAudioFile(path):
 
 def get_sig(filename):
     """Gets a signal from an audio file
-
     Parameters
     ----------
     filename : string
         Name of the WAV audio file, including extension
-
     Returns
     ----------
     rate : int
@@ -93,7 +88,6 @@ def get_sig(filename):
 
 def get_st_features(signal, rate, window_step=0.025, window_length=0.05):
     """Computes all 34 features for each window in a given signal
-
     Parameters
     ----------
     signal : numpy array
@@ -108,7 +102,6 @@ def get_st_features(signal, rate, window_step=0.025, window_length=0.05):
         Length of each window, in seconds
         Should generally be greater than windowStep to allow for overlap between frames
         Default: 0.05 (50 ms)
-
     Returns
     ----------
     features : numpy array
@@ -127,18 +120,15 @@ def get_st_features(signal, rate, window_step=0.025, window_length=0.05):
 
 def relevant_indexes(data, min_threshold):
     """Finds first and last index where data > min_threshold
-
     To find the start and end indexes of the frames where there is some noise
     Could be useful to take many audio clips and find the lowest start index and highest end index common between
     all audio clips. This would be useful if the ML code must take a fixed # of input layer data points
-
     Parameters
     ----------
     data : numpy array
         Energy levels of multiple frames
     min_threshold : float
         Minimum threshold value that each data is compared to
-
     Returns
     ----------
     start_index : int
@@ -164,7 +154,6 @@ def relevant_indexes(data, min_threshold):
 
 def make_line_plot(data, x_label="Data", y_label="Data Point"):
     """Creates a line plot of data, where each point on the plot is (i, data[i])
-
     Parameters
     ----------
     data : numpy array
@@ -173,7 +162,6 @@ def make_line_plot(data, x_label="Data", y_label="Data Point"):
         The label to put on the independent axis
     y_label : str
         The label to put on the dependent axis
-
     Returns
     ----------
     None"""
@@ -189,12 +177,10 @@ def make_line_plot(data, x_label="Data", y_label="Data Point"):
 
 def get_trimmed_features(words, num_recordings, base_path="", energy_threshold=0.001):
     """Calculates features for a list of words, returning trimmed data based on a frame energy threshold
-
     Assumes all audio recordings are in the same directory base_path, and all recordings are WAV format.
     Calculates features for every recording and returns them in a hierarchical array to be fed into a neural network.
     The number of frames for each word type is the same for all recordings of that word type, as determined by
     the energy threshold for each frame.
-
     Parameters
     ----------
     words : [str]
@@ -213,7 +199,6 @@ def get_trimmed_features(words, num_recordings, base_path="", energy_threshold=0
     energy_threshold : float
         Minimum energy for a given frame to be considered relevant
         i.e. if a frame is loud enough or contains enough information to impact the data set
-
     Returns
     ----------
     features_by_word : numpy array
