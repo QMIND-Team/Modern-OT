@@ -3,7 +3,7 @@ Warm-up project for the Modern OT project. Couple of nerds classifying words :so
 
 To get started:
 ```python
-pip install pyAudioAnalysis matplotlib numpy
+pip install pyAudioAnalysis matplotlib numpy sounddevice
 ```
 
 The meat & potatoes of this code is in `segmentation.py`.

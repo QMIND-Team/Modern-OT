@@ -6,14 +6,6 @@ import pickle as cPickle
 import glob
 import os
 
-# Directory where the annotated training data is located
-trainDir = 'ModernOTData/TrainHMM'
-# Name to store the final HMM under
-hmmName = 'TrainedHMM'
-# Location of the test files, including annotations and .wav
-testDir = 'ModernOTData/TestHMM'
-
-
 # If we were to iterate through these parameters with different values for every short- and mid-term window step
 # and size, we would be able to optimize the HMM training for maximum accuracy
 # Depending on the training and test data, and what we're looking to optimize and segment for, we will be able to
@@ -33,7 +25,7 @@ testDir = 'ModernOTData/TestHMM'
 # All of the above could be repeated for the midterm window variables
 # Then, iterate through parameters to find the highest accuracy
 # Also, once each set of parameters has been used to train the HMM, it should be tested on multiple files to avoid
-# overfitting.
+# over-fitting.
 # Also, the parameters used to train the HMM might not be the best ones to test/use the HMM on, but I think this is
 # unlikely.
 
@@ -45,11 +37,14 @@ testDir = 'ModernOTData/TestHMM'
 # version of the audio file to the disk
 
 
-def optimizeParameters(stWinSizeMin=0.02, stWinSizeMax=0.05, stWinSizeInterval=0.005, stWinStepFactor=2,
-                       stWinStepNumIntervals=10, mtWinSizeMin=0.1, mtWinSizeMax=0.3, mtWinSizeInterval=0.02,
-                       mtWinStepFactor=2, mtWinStepNumIntervals=10, hmmTempName="tempHMM"):
+def optimizeParameters(hmmTempName, trainDir, testDir, stWinSizeMin=0.02, stWinSizeMax=0.05, stWinSizeInterval=0.005,
+                       stWinStepFactor=2, stWinStepNumIntervals=10, mtWinSizeMin=0.1, mtWinSizeMax=0.3,
+                       mtWinSizeInterval=0.02, mtWinStepFactor=2, mtWinStepNumIntervals=10):
     """
     This function does everything I outlined above. Currently too lazy to actually format it.
+    :param hmmTempName:
+    :param trainDir:
+    :param testDir:
     :param stWinSizeMin:
     :param stWinSizeMax:
     :param stWinSizeInterval:
@@ -221,16 +216,28 @@ def writeAudioFile(path, sampleRate, sig):
     wf.write(path, sampleRate, sig)
 
 
-# If the an HMM has not already been trained
-if not os.path.isfile(hmmName):
-    # Get the best config for short and mid term window size and step
-    config = optimizeParameters(stWinSizeMin=0.02, stWinSizeMax=0.03, stWinSizeInterval=0.005, stWinStepFactor=2,
-                                stWinStepNumIntervals=2, mtWinSizeMin=0.1, mtWinSizeMax=0.2, mtWinSizeInterval=0.05,
-                                mtWinStepFactor=2, mtWinStepNumIntervals=2, hmmTempName="tempHMM")
-    # Create a trained HMM with the best configuration.
-    aa.trainHMM_fromDir(trainDir, hmmName, config[0], config[1], config[2], config[3])
+def trainAndRun(trainDir='ModernOTData/TrainHMM', hmmName='TrainedHMM', testDir='ModernOTData/TestHMM'):
+    """
+    Sample of usage which trains the HMM if one doesn't already exist, and segments an audio file
+    :param trainDir: String
+        Directory where the annotated training data is located
+    :param hmmName: String
+        Name to store the final HMM under
+    :param testDir: String
+        Location of the test files, including annotations and .wav
+    :return: None
+    """
+    # If the an HMM has not already been trained
+    if not os.path.isfile(hmmName):
+        # Get the best config for short and mid term window size and step
+        config = optimizeParameters("tempHMM", trainDir, testDir, stWinSizeMin=0.02, stWinSizeMax=0.03,
+                                    stWinSizeInterval=0.005, stWinStepFactor=2, stWinStepNumIntervals=2,
+                                    mtWinSizeMin=0.1, mtWinSizeMax=0.2, mtWinSizeInterval=0.05, mtWinStepFactor=2,
+                                    mtWinStepNumIntervals=2)
+        # Create a trained HMM with the best configuration.
+        aa.trainHMM_fromDir(trainDir, hmmName, config[0], config[1], config[2], config[3])
 
-# Get an edited audio signal. The third parameter is whatever label should be removed from the audio clip
-rate, signal = segmentAudioFile("ModernOTData/test.wav", hmmName, "light")
-# Save the audio signal
-writeAudioFile("output.wav", rate, signal)
+    # Get an edited audio signal. The third parameter is whatever label should be removed from the audio clip
+    rate, signal = segmentAudioFile("ModernOTData/test.wav", hmmName, "light")
+    # Save the audio signal
+    writeAudioFile("output.wav", rate, signal)
