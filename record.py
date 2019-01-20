@@ -1,6 +1,8 @@
 import sounddevice as sd
 import numpy as np
 from lib import audioFeatureExtraction as aF
+import http.server
+import socketserver
 
 """
 This script is the main recording loop. It should continuously record data, spaced in blocks of a specific length of 
@@ -83,3 +85,16 @@ def checkForSound(signal, overlap, threshold):
     else:
         return False
 
+def createLocalHost(port = 8888):
+    """
+    Creates a local host http server for project at address "http://localhost:port" where port is the port number. One
+    can access sub directories of project directory of local host by adding that to the end of the address. For example
+    to access .wav file in data folder one would go to address "http://localhost:port/DataFolder/data.wav"
+    :param port: the port number of the local host
+    :return: void
+    """
+    Handler = http.server.SimpleHTTPRequestHandler
+
+    httpd = socketserver.TCPServer(("", PORT), Handler)
+    print("Currently Serving Port:", port)
+    httpd.serve_forever()
