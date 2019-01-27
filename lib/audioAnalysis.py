@@ -128,31 +128,33 @@ def trainHMM_fromDir(dirPath, hmm_model_name, mt_win, mt_step, st_win=0.05, st_s
     return hmm, classes_all
 
 
-def hmmSegmentation(wav_file_name, hmm_model_name, plot_res=False,
-                    gt_file_name=""):
-    [fs, x] = readAudioFile(wav_file_name)
-    try:
-        fo = open(hmm_model_name, "rb")
-    except IOError:
-        print("Couldn't find audio file")
-        return
+def hmmSegmentation(x, fs, hmmData, plot_res=False, gt_file_name=""):
+    """
+    Segments an audio signal using a trained HMM, with option to plot results and compare results to annotated audio
+    file
+    :param x: ndarray
+        Audio signal
+    :param fs: int
+        Sample rate
+    :param hmmData: dict
+        Dict containing all of the HMM data
+    :param plot_res: bool
+        (optional) Choose to plot results
+    :param gt_file_name: String
+        (optional) Path to annotation file, including .segments extension
+    :return: ([int], [string], float, ???)
+        Returns the indexes where a given class was identified, all classes that the HMM is trained on, a float
+        representing accuracy (0 to 1), and something else I'm not sure about
+    """
+    # Get data out of dict
+    hmm = hmmData["HMM"]
+    classes_all = hmmData["allClasses"]
+    mt_win = hmmData["mtWinSize"]
+    mt_step = hmmData["mtWinStep"]
+    st_win = hmmData["stWinSize"]
+    st_step = hmmData["stWinStep"]
 
-    try:
-        hmm = cPickle.load(fo)
-        classes_all = cPickle.load(fo)
-        mt_win = cPickle.load(fo)
-        mt_step = cPickle.load(fo)
-        st_win = cPickle.load(fo)
-        st_step = cPickle.load(fo)
-    except:
-        print("Couldn't find HMM file")
-        fo.close()
-        return
-    fo.close()
-
-    [Features, _, _] = aF.mtFeatureExtraction(x, fs, mt_win * fs, mt_step * fs,
-                                              round(fs * st_win),
-                                              round(fs * st_step))
+    [Features, _, _] = aF.mtFeatureExtraction(x, fs, mt_win * fs, mt_step * fs, round(fs * st_win), round(fs * st_step))
     flags_ind = hmm.predict(Features.T)  # apply model
     if os.path.isfile(gt_file_name):
         [seg_start, seg_end, seg_labs] = readSegmentGT(gt_file_name)
@@ -174,10 +176,9 @@ def hmmSegmentation(wav_file_name, hmm_model_name, plot_res=False,
     acc = plotSegmentationResults(flags_ind, flags_ind_gt, classes_all,
                                   mt_step, not plot_res)
     if acc >= 0:
-        #print("Overall Accuracy: {0:.2f}".format(acc))
-        return (flags_ind, class_names_gt, acc, cm)
+        return flags_ind, class_names_gt, acc, cm
     else:
-        return (flags_ind, classes_all, -1, -1)
+        return flags_ind, classes_all, -1, -1
 
 
 def trainHMM_computeStatistics(features, labels):

@@ -1,7 +1,6 @@
 from lib import audioAnalysis as aa
 from scipy.io import wavfile as wf
 import numpy as np
-import wavProcessing as wp
 import pickle as cPickle
 import glob
 import os
@@ -61,6 +60,7 @@ def optimizeParameters(hmmTempName, trainDir, testDir, stWinSizeMin=0.02, stWinS
     floatError = 0.00000002
     # Set defaults
     mtWinSize = mtWinSizeMin
+    log = "Accuracy,mtWinSize,mtWinStep,stWinSize,stWinStep\n"
     # Keep track of best accuracy
     bestAcc = 0
     bestConfig = []
@@ -84,6 +84,8 @@ def optimizeParameters(hmmTempName, trainDir, testDir, stWinSizeMin=0.02, stWinS
                         aa.trainHMM_fromDir(trainDir, hmmTempName, mtWinSize, mtWinStep, stWinSize, stWinStep)
                         # Test HMM
                         acc = testFromDir(testDir, hmmTempName)
+                        log += ",".join(["{0:.4f}".format(acc), str(round(mtWinSize,4)), str(round(mtWinStep,4)),
+                                         str(round(stWinSize,4)), str(round(stWinStep, 4))]) + "\n"
                         print("Last accuracy: {0:.2f}%".format(acc*100))
                         # If this config is better than the existing,
                         if acc > bestAcc:
@@ -105,6 +107,10 @@ def optimizeParameters(hmmTempName, trainDir, testDir, stWinSizeMin=0.02, stWinS
 
     # Delete the temp HMM
     os.remove(hmmTempName)
+
+    f = open("log.txt", "w")
+    f.write(log)
+    f.close()
 
     print("Best accuracy is {0:.2f}%".format(bestAcc*100))
     print("Best config is:")
@@ -140,66 +146,106 @@ def testFromDir(path, hmmTestName, numFiles=-1):
         if not allFiles and i >= numFiles:
             break
         # for each WAV file
-        wav_file = f
+        fs, x = aa.readAudioFile(f)
+        hmm = readHMM(hmmTestName)
         gt_file = f.replace('.wav', '.segments')
         if not os.path.isfile(gt_file):
             continue
-        _, _, acc, _ = aa.hmmSegmentation(wav_file, hmmTestName, False, gt_file)
+        _, _, acc, _ = aa.hmmSegmentation(x, fs, hmm, False, gt_file)
         totalAcc += acc
         totalFiles += 1
     return totalAcc/totalFiles
 
 
-def segmentAudioFile(path, trainedHMMName, flag):
+def segmentAudioSignal(signal, sampleRate, hmmData):
     """
-    Edits an audio file using a trained HMM to segment audio files and remove the specified flags from the audio
-    :param path: String
-        Path to audio file being segmented, including the .wav extension
-    :param trainedHMMName: String
-        Name of the file where the pickled HMM is stored
-    :param flag: String
-        Label to be removed from audio, corresponding to a label in the annotated audio files the HMM was trained on
+    Segments an audio clip using a trained HMM. This function handles using the trained HMM.
+    Does not read, write, nor edit audio files
+    :param signal: ndarray
+        Audio signal
+    :param sampleRate: int
+        Sample rate of signal
+    :param hmmData: dict
+        Dict containing all of the HMM data
     :return: (int, list)
         Return a tuple containing the signal sample rate and the modified signal
     """
-    # Read the HMM for window size/step info
-    try:
-        fo = open(trainedHMMName, "rb")
-        _ = cPickle.load(fo)
-        _ = cPickle.load(fo)
-        _ = cPickle.load(fo)
-        mtWinStep = cPickle.load(fo)
-    except IOError:
-        print("Couldn't open HMM")
-        return -1, -1
-    fo.close()
-
-    # Read the audio file
-    try:
-        sampleRate, sig = wp.readAudioFile(path)
-    except IOError:
-        print("Couldn't read audio file")
-        return -1, -1
-
-    x = np.empty((0, 1), dtype=sig.dtype)
     # Segment the audio file
-    flags, classes, _, _ = aa.hmmSegmentation(path, trainedHMMName)
-    # Convert the supplied flag to a numerical index
-    flagInd = classes.index(flag)
+    flags, classes, _, _ = aa.hmmSegmentation(signal, sampleRate, hmmData)
+    return flags, classes
+
+
+def removeSegments(signal, sampleRate, flags, classes, winStep, labelsToRemove):
+    """
+    Creates a new signal by removing all instances of specified labels from an original signal, after original signal
+    has been run through a trained HMM
+    :param signal: ndarray
+        The original audio signal
+    :param sampleRate: int
+        Sample rate of audio signal
+    :param flags: [int]
+        Index flag output from trained HMM
+    :param classes: [String]
+        Class list output from trained HMM
+    :param winStep: float
+        Time (seconds) corresponding to the length of one flag
+    :param labelsToRemove: [String]
+        Labels to remove from original signal
+    :return: ndarray
+        Audio signal with specified labels removed
+    """
+    # Create empty array for new signal
+    x = np.empty((0, 1), dtype=signal.dtype)
+    # Convert the supplied labels to a numerical indexes
+    flagIndexes = []
+    for label in labelsToRemove:
+        try:
+            flagIndexes.append(classes.index(label))
+        except ValueError:
+            print("Error: label " + label + " not in class list. Continuing without it")
+            continue
+
     # TODO: Ensure this algorithm works in the case where there is overlap (mtWinSize!=mtWinStep)
     # This could become an issue when there is overlap and we near the end of a file. Flags towards the end may not be
     # analyzed correctly
-    samplesPerFlag = round(mtWinStep * sampleRate)
+    samplesPerFlag = round(winStep * sampleRate)
     for i, f in enumerate(flags):
         # Case 1: found audio we want to keep, and not at end of signal
-        if f != flagInd and i < len(flags) - 1:
-            nextData = sig[i*samplesPerFlag:i*samplesPerFlag + samplesPerFlag]
+        if f not in flagIndexes and i < len(flags) - 1:
+            nextData = signal[i*samplesPerFlag:i*samplesPerFlag + samplesPerFlag]
             x = np.append(x, np.array(nextData).reshape(len(nextData), 1))
         # Case 2: Found audio we ant to keep, but at end of file
-        elif f != flagInd:
-            nextData = sig[i*samplesPerFlag:]
+        elif f not in flagIndexes:
+            nextData = signal[i*samplesPerFlag:]
             x = np.append(x, np.array(nextData).reshape(len(nextData), 1))
-    return sampleRate, x
+    return x
+
+
+def trimKeyword(signal, sampleRate, hmmData, keywordLabel, reverse=False):
+    """
+    Removes audio from a signal up to and including the keyword. Works when the keyword is known to be in the signal
+    :param signal: ndarray
+        Audio signal known to have a keyword in it
+    :param sampleRate: int
+        Sample rate of audio signal
+    :param hmmData: dict
+        Dict containing all of the HMM data
+    :param keywordLabel: String
+        Keyword label known to be in signal
+    :param reverse: bool
+        Indicates whether to start trimming before the keyword, or after. If True, audio before the keyword is kept
+    :return: ndarray
+        The edited audio signal with all audio up to and including the keyword removed
+    """
+    # First, figure out where keyword is within the signal
+    flags, classes = segmentAudioSignal(signal, sampleRate, hmmData)
+    # Then, trim audio after the start of the keyword
+    if reverse:
+        return signal[:flags.index(classes.index(keywordLabel)) * int(sampleRate * hmmData["mtWinStep"])]
+    # Or trim audio before the end of the keyword
+    else:
+        return signal[(len(flags) - flags[::-1].index(classes.index(keywordLabel)) + 1) *
+                      int(sampleRate * hmmData["mtWinStep"]):]
 
 
 def writeAudioFile(path, sampleRate, sig):
@@ -216,9 +262,9 @@ def writeAudioFile(path, sampleRate, sig):
     wf.write(path, sampleRate, sig)
 
 
-def trainAndRun(trainDir='ModernOTData/TrainHMM', hmmName='TrainedHMM', testDir='ModernOTData/TestHMM'):
+def trainHMM(trainDir='ModernOTData/KeywordTrain', hmmName='TrainedHMM', testDir='ModernOTData/KeywordTest'):
     """
-    Sample of usage which trains the HMM if one doesn't already exist, and segments an audio file
+    Train the HMM
     :param trainDir: String
         Directory where the annotated training data is located
     :param hmmName: String
@@ -227,17 +273,91 @@ def trainAndRun(trainDir='ModernOTData/TrainHMM', hmmName='TrainedHMM', testDir=
         Location of the test files, including annotations and .wav
     :return: None
     """
-    # If the an HMM has not already been trained
-    if not os.path.isfile(hmmName):
-        # Get the best config for short and mid term window size and step
-        config = optimizeParameters("tempHMM", trainDir, testDir, stWinSizeMin=0.02, stWinSizeMax=0.03,
-                                    stWinSizeInterval=0.005, stWinStepFactor=2, stWinStepNumIntervals=2,
-                                    mtWinSizeMin=0.1, mtWinSizeMax=0.2, mtWinSizeInterval=0.05, mtWinStepFactor=2,
-                                    mtWinStepNumIntervals=2)
-        # Create a trained HMM with the best configuration.
-        aa.trainHMM_fromDir(trainDir, hmmName, config[0], config[1], config[2], config[3])
+    # Get the best config for short and mid term window size and step
+    config = optimizeParameters("tempHMM", trainDir, testDir, stWinSizeMin=0.01, stWinSizeMax=0.05,
+                                stWinSizeInterval=0.005, stWinStepFactor=2, stWinStepNumIntervals=2,
+                                mtWinSizeMin=0.1, mtWinSizeMax=0.3, mtWinSizeInterval=0.1, mtWinStepFactor=2,
+                                mtWinStepNumIntervals=2)
+    # Create a trained HMM with the best configuration.
+    aa.trainHMM_fromDir(trainDir, hmmName, config[0], config[1], config[2], config[3])
 
-    # Get an edited audio signal. The third parameter is whatever label should be removed from the audio clip
-    rate, signal = segmentAudioFile("ModernOTData/test.wav", hmmName, "light")
-    # Save the audio signal
-    writeAudioFile("output.wav", rate, signal)
+
+def readHMM(path):
+    """
+    Reads an HMM at the path specified, returning a dict of the values
+    :param path: String
+        Path + name of pickled HMM
+    :return: dict
+        Dict containing all of the HMM data
+    """
+    # Read the HMM for window size/step info
+    try:
+        fo = open(path, "rb")
+        hmmData = {
+            "HMM": cPickle.load(fo),
+            "allClasses": cPickle.load(fo),
+            "mtWinSize": cPickle.load(fo),
+            "mtWinStep": cPickle.load(fo),
+            "stWinSize": cPickle.load(fo),
+            "stWinStep": cPickle.load(fo)
+        }
+    except IOError:
+        print("Couldn't open HMM")
+        return
+    fo.close()
+    return hmmData
+
+
+def containsLabel(signal, sampleRate, hmmData, label):
+    """
+    Uses a trained HMM to check if a given audio file contains a given label. Should be a lightweight function as it is
+    called frequently
+    :param signal: ndarray
+        Audio signal
+    :param sampleRate: int
+        Sample rate
+    :param hmmData: dict
+        Dict containing HMM data
+    :param label: String
+        Label to check signal for
+    :return: int
+        Returns True if the label is detected in the audio file, False if no
+    """
+    flags, classes = segmentAudioSignal(signal, sampleRate, hmmData)
+    try:
+        index = classes.index(label)
+    except ValueError:
+        print("HMM not trained to recognize label" + label)
+        return
+    return index in flags
+
+
+def quickOptimize(trainDir="ModernOTData/KeywordTrain", testDir="ModernOTData/KeywordTest", mtWinMin=0.025, mtWinMax=0.2,
+                  stWinMin=0.01, stWinMax=0.025):
+    bestAcc = 0
+    bestConfig = []
+
+    mtWin = mtWinMin
+    # Constant to avoid weird floating point errors so that no configurations are skipped
+    floatError = 0.00000002
+    while mtWin < mtWinMax - floatError:
+        stWin = stWinMin
+        while stWin < stWinMax - floatError:
+            aa.trainHMM_fromDir(trainDir, "tempHMM", mtWin, mtWin, stWin, stWin/2)
+            acc = testFromDir(testDir, "tempHMM")
+            print("Current accuracy: {0:.2f}%".format(acc*100))
+            if acc > bestAcc:
+                bestAcc = acc
+                bestConfig = (mtWin, mtWin, stWin, stWin/2)
+            stWin += 0.0025
+        mtWin += 0.025
+
+    os.remove("tempHMM")
+
+    print("Best accuracy is {0:.2f}%".format(bestAcc * 100))
+    print("Best config is:")
+    print("mtWinSize =", bestConfig[0])
+    print("mtWinStep =", bestConfig[1])
+    print("stWinSize =", bestConfig[2])
+    print("stWinStep =", bestConfig[3])
+    return bestConfig
