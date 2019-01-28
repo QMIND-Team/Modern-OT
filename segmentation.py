@@ -274,8 +274,8 @@ def trainHMM(trainDir='ModernOTData/KeywordTrain', hmmName='TrainedHMM', testDir
     :return: None
     """
     # Get the best config for short and mid term window size and step
-    config = optimizeParameters("tempHMM", trainDir, testDir, stWinSizeMin=0.01, stWinSizeMax=0.05,
-                                stWinSizeInterval=0.005, stWinStepFactor=2, stWinStepNumIntervals=2,
+    config = optimizeParameters("tempHMM", trainDir, testDir, stWinSizeMin=0.02, stWinSizeMax=0.04,
+                                stWinSizeInterval=0.01, stWinStepFactor=2, stWinStepNumIntervals=2,
                                 mtWinSizeMin=0.1, mtWinSizeMax=0.3, mtWinSizeInterval=0.1, mtWinStepFactor=2,
                                 mtWinStepNumIntervals=2)
     # Create a trained HMM with the best configuration.

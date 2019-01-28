@@ -139,7 +139,7 @@ def start(hmmPath, keywordLabel):
     recordCheck(blockTime, overlapCheckPortion, energyThreshold, hmmData, fs, keywordLabel)
 
 
-def createLocalHost(port = 8888):
+def createLocalHost(port=8888):
     """
     Creates a local host http server for project at address "http://localhost:port" where port is the port number. One
     can access sub directories of project directory of local host by adding that to the end of the address. For example
@@ -149,6 +149,6 @@ def createLocalHost(port = 8888):
     """
     Handler = http.server.SimpleHTTPRequestHandler
 
-    httpd = socketserver.TCPServer(("", PORT), Handler)
+    httpd = socketserver.TCPServer(("", port), Handler)
     print("Currently Serving Port:", port)
     httpd.serve_forever()
